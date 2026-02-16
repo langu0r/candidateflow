@@ -285,12 +285,24 @@ export default {
       view.value = 'admin'
     }
 
-    const handleLogout = () => {
-      currentUser.value = null
-      localStorage.removeItem('currentUser')
-      view.value = 'public'
-      toast.success('Logged out successfully')
-    }
+const handleLogout = () => {
+  currentUser.value = null
+  
+  // Удаляем данные текущей сессии
+  localStorage.removeItem('currentUser')
+  localStorage.removeItem('accessToken')
+  localStorage.removeItem('companyId')
+  
+  // Если нужно сохранить users (список зарегистрированных пользователей),
+  // не удаляем его
+  
+  view.value = 'admin'
+  authView.value = 'login'  // показываем форму входа
+  toast.success('Logged out successfully')
+  
+  // Опционально: перенаправляем на страницу логина
+  authView.value = 'login'
+}
 
     const handleApplicationSubmit = (applicationData) => {
       const newCandidate = {
