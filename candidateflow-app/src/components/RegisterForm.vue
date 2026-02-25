@@ -10,6 +10,7 @@
       </div>
 
       <form @submit.prevent="handleSubmit" class="space-y-5">
+        <!-- Full Name -->
         <div>
           <label class="block text-sm mb-2 text-gray-700">Full Name</label>
           <div class="relative">
@@ -24,6 +25,7 @@
           </div>
         </div>
 
+        <!-- Email -->
         <div>
           <label class="block text-sm mb-2 text-gray-700">Email Address</label>
           <div class="relative">
@@ -38,6 +40,7 @@
           </div>
         </div>
 
+        <!-- Password -->
         <div>
           <label class="block text-sm mb-2 text-gray-700">Password</label>
           <div class="relative">
@@ -60,6 +63,7 @@
           </div>
         </div>
 
+        <!-- Confirm Password -->
         <div>
           <label class="block text-sm mb-2 text-gray-700">Confirm Password</label>
           <div class="relative">
@@ -82,23 +86,30 @@
           </div>
         </div>
 
+        <!-- Submit Button -->
         <button
           type="submit"
-          class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-medium"
+          :disabled="loading"
+          class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Create Account
+          <span v-if="loading" class="flex items-center justify-center gap-2">
+            <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            Creating account...
+          </span>
+          <span v-else>Create Account</span>
         </button>
       </form>
 
+      <!-- Login Link -->
       <div class="mt-6 text-center">
         <p class="text-gray-600">
           Already have an account?{' '}
-          <button
-            @click="$emit('switch-to-login')"
+          <router-link
+            to="/login"
             class="text-blue-600 hover:text-blue-700 font-medium"
           >
             Sign in
-          </button>
+          </router-link>
         </p>
       </div>
 
@@ -111,62 +122,45 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 import { UserPlus, Mail, Lock, User as UserIcon, Eye, EyeOff } from 'lucide-vue-next'
-import { toast } from '../utils/toast'
+import { useToast } from '../composables/useToast'
 
-export default {
-  name: 'RegisterForm',
-  components: {
-    UserPlus,
-    Mail,
-    Lock,
-    UserIcon,
-    Eye,
-    EyeOff
-  },
-  props: {
-    onRegister: {
-      type: Function,
-      required: true
-    },
-    onSwitchToLogin: {
-      type: Function,
-      required: true
-    }
-  },
-  emits: ['register', 'switch-to-login'],
-  setup(props, { emit }) {
-    const formData = ref({
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: ''
-    })
-    const showPassword = ref(false)
-    const showConfirmPassword = ref(false)
-
-    const handleSubmit = () => {
-      if (formData.value.password !== formData.value.confirmPassword) {
-        toast.error('Passwords do not match')
-        return
-      }
-
-      if (formData.value.password.length < 6) {
-        toast.error('Password must be at least 6 characters')
-        return
-      }
-
-      emit('register', formData.value.email, formData.value.password, formData.value.name)
-    }
-
-    return {
-      formData,
-      showPassword,
-      showConfirmPassword,
-      handleSubmit
-    }
+const props = defineProps({
+  loading: {
+    type: Boolean,
+    default: false
   }
+})
+
+const emit = defineEmits(['register'])
+
+const toast = useToast()
+
+// Состояние формы
+const formData = ref({
+  name: '',
+  email: '',
+  password: '',
+  confirmPassword: ''
+})
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
+
+// Отправка формы
+const handleSubmit = () => {
+  // Валидация
+  if (formData.value.password !== formData.value.confirmPassword) {
+    toast.error('Passwords do not match')
+    return
+  }
+
+  if (formData.value.password.length < 6) {
+    toast.error('Password must be at least 6 characters')
+    return
+  }
+
+  emit('register', formData.value.email, formData.value.password, formData.value.name)
 }
 </script>

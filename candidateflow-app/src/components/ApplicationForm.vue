@@ -23,6 +23,7 @@
       </p>
 
       <form @submit.prevent="handleSubmit" class="space-y-6">
+        <!-- Full Name -->
         <div>
           <label class="block text-sm mb-2 text-gray-700">
             Full Name *
@@ -36,6 +37,7 @@
           />
         </div>
 
+        <!-- Email -->
         <div>
           <label class="block text-sm mb-2 text-gray-700">
             Email Address *
@@ -49,6 +51,7 @@
           />
         </div>
 
+        <!-- Phone -->
         <div>
           <label class="block text-sm mb-2 text-gray-700">
             Phone Number *
@@ -62,19 +65,24 @@
           />
         </div>
 
+        <!-- Position -->
         <div>
           <label class="block text-sm mb-2 text-gray-700">
             Position Applied For *
           </label>
-          <input
-            type="text"
+          <select
             required
-            v-model="formData.position"
+            v-model="formData.positionId"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="e.g., Software Engineer, Marketing Intern"
-          />
+          >
+            <option value="" disabled>Select a position</option>
+            <option v-for="pos in positions" :key="pos.id" :value="pos.id">
+              {{ pos.title }} ({{ pos.department }})
+            </option>
+          </select>
         </div>
 
+        <!-- CV Upload -->
         <div>
           <label class="block text-sm mb-2 text-gray-700">
             Upload CV *
@@ -98,92 +106,129 @@
           </div>
         </div>
 
+        <!-- Submit Button -->
         <button
           type="submit"
-          class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition"
+          :disabled="submitting"
+          class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Submit Application
+          <span v-if="submitting" class="flex items-center justify-center gap-2">
+            <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            Submitting...
+          </span>
+          <span v-else>Submit Application</span>
         </button>
       </form>
     </div>
   </div>
 </template>
 
-<script>
-import { ref } from 'vue'
+<script setup>
+import { ref, onMounted, onActivated } from 'vue'
 import { Upload, CheckCircle } from 'lucide-vue-next'
-import { toast } from '../utils/toast'
+import { useToast } from '../composables/useToast'
+import { fetchPositions } from '../api/positions'
 
-export default {
-  name: 'ApplicationForm',
-  components: {
-    Upload,
-    CheckCircle
-  },
-  props: {
-    onSubmit: {
-      type: Function,
-      required: true
-    }
-  },
-  setup(props) {
-    const formData = ref({
-      name: '',
-      email: '',
-      phone: '',
-      position: ''
-    })
-    const cvFile = ref(null)
-    const submitted = ref(false)
+const emit = defineEmits(['submit'])
 
-    const handleFileChange = (e) => {
-      const file = e.target.files?.[0]
-      if (file) {
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error('File size must be less than 5MB')
-          return
-        }
-        if (!file.name.match(/\.(pdf|doc|docx)$/i)) {
-          toast.error('Please upload a PDF or DOC file')
-          return
-        }
-        cvFile.value = file
-      }
-    }
+const toast = useToast()
 
-    const handleSubmit = async () => {
-      if (!cvFile.value) {
-        toast.error('Please upload your CV')
-        return
-      }
+// Состояние
+const formData = ref({
+  name: '',
+  email: '',
+  phone: '',
+  positionId: ''
+})
+const positions = ref([])
+const cvFile = ref(null)
+const submitted = ref(false)
+const submitting = ref(false)
 
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        props.onSubmit({
-          ...formData.value,
-          cvFileName: cvFile.value.name,
-          cvFileData: reader.result
-        })
-        submitted.value = true
-        toast.success('Application submitted successfully!')
-      }
-      reader.readAsDataURL(cvFile.value)
-    }
-
-    const resetForm = () => {
-      submitted.value = false
-      formData.value = { name: '', email: '', phone: '', position: '' }
-      cvFile.value = null
-    }
-
-    return {
-      formData,
-      cvFile,
-      submitted,
-      handleFileChange,
-      handleSubmit,
-      resetForm
-    }
+// Загрузка доступных позиций
+const loadPositions = async () => {
+  try {
+    positions.value = await fetchPositions()
+  } catch (error) {
+    toast.error('Failed to load positions')
   }
+}
+
+// Загрузка при монтировании
+onMounted(() => {
+  loadPositions()
+})
+
+// Загрузка при активации компонента (возврат на страницу)
+onActivated(() => {
+  loadPositions()
+  // Сбрасываем форму если нужно
+  if (submitted.value) {
+    resetForm()
+  }
+})
+
+// Обработка выбора файла
+const handleFileChange = (e) => {
+  const file = e.target.files?.[0]
+  if (file) {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size must be less than 5MB')
+      return
+    }
+    if (!file.name.match(/\.(pdf|doc|docx)$/i)) {
+      toast.error('Please upload a PDF or DOC file')
+      return
+    }
+    cvFile.value = file
+  }
+}
+
+// Отправка формы
+const handleSubmit = async () => {
+  if (!cvFile.value) {
+    toast.error('Please upload your CV')
+    return
+  }
+
+  if (!formData.value.positionId) {
+    toast.error('Please select a position')
+    return
+  }
+
+  submitting.value = true
+
+  try {
+    // Находим выбранную позицию
+    const selectedPosition = positions.value.find(p => p.id === formData.value.positionId)
+    
+    // Читаем файл
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      emit('submit', {
+        ...formData.value,
+        position: selectedPosition.title,
+        cv: {
+          originalName: cvFile.value.name,
+          fileSize: cvFile.value.size,
+          mimeType: cvFile.value.type,
+          fileData: reader.result
+        }
+      })
+      submitted.value = true
+    }
+    reader.readAsDataURL(cvFile.value)
+  } catch (error) {
+    toast.error('Failed to submit application')
+  } finally {
+    submitting.value = false
+  }
+}
+
+// Сброс формы
+const resetForm = () => {
+  submitted.value = false
+  formData.value = { name: '', email: '', phone: '', positionId: '' }
+  cvFile.value = null
 }
 </script>

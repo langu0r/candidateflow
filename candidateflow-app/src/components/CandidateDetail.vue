@@ -13,7 +13,7 @@
             >
               {{ tag }}
               <button
-                @click="onRemoveTag(candidate.id, tag)"
+                @click="$emit('remove-tag', candidate.id, tag)"
                 class="hover:text-blue-900"
               >
                 <X class="w-3 h-3" />
@@ -21,7 +21,7 @@
             </span>
           </div>
         </div>
-        <button @click="onClose" class="text-gray-400 hover:text-gray-600">
+        <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600">
           <X class="w-6 h-6" />
         </button>
       </div>
@@ -49,7 +49,7 @@
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             ]"
           >
-            Comments ({{ candidate.comments.length }})
+            Comments ({{ candidate.comments?.length || 0 }})
           </button>
           <button
             @click="activeTab = 'history'"
@@ -60,13 +60,14 @@
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             ]"
           >
-            History ({{ candidate.history.length }})
+            History ({{ candidate.history?.length || 0 }})
           </button>
         </div>
       </div>
 
       <!-- Content -->
       <div class="flex-1 overflow-y-auto p-6">
+        <!-- Overview Tab -->
         <div v-if="activeTab === 'overview'" class="space-y-6">
           <div class="grid grid-cols-2 gap-4">
             <div class="flex items-center gap-3">
@@ -80,7 +81,7 @@
               <Phone class="w-5 h-5 text-gray-400" />
               <div>
                 <p class="text-sm text-gray-600">Phone</p>
-                <p class="text-gray-900">{{ candidate.phone }}</p>
+                <p class="text-gray-900">{{ candidate.phone || 'Not provided' }}</p>
               </div>
             </div>
             <div class="flex items-center gap-3">
@@ -95,13 +96,14 @@
               <div>
                 <p class="text-sm text-gray-600">Applied</p>
                 <p class="text-gray-900">
-                  {{ formatDate(candidate.appliedAt) }}
+                  {{ formatDate(candidate.createdAt) }}
                 </p>
               </div>
             </div>
           </div>
 
-          <div class="border-t border-gray-200 pt-6">
+          <!-- CV Document -->
+          <div v-if="candidate.cv" class="border-t border-gray-200 pt-6">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-lg">CV Document</h3>
               <button
@@ -113,10 +115,14 @@
               </button>
             </div>
             <div class="bg-gray-50 rounded-lg p-4">
-              <p class="text-gray-700">{{ candidate.cvFileName }}</p>
+              <p class="text-gray-700">{{ candidate.cv.originalName }}</p>
+              <p class="text-xs text-gray-500 mt-1">
+                Uploaded {{ formatDate(candidate.cv.uploadedAt) }}
+              </p>
             </div>
           </div>
 
+          <!-- Add Tags -->
           <div class="border-t border-gray-200 pt-6">
             <h3 class="text-lg mb-3">Add Tags</h3>
             <div class="flex gap-2 mb-3 flex-wrap">
@@ -147,6 +153,7 @@
           </div>
         </div>
 
+        <!-- Comments Tab -->
         <div v-if="activeTab === 'comments'" class="space-y-4">
           <div class="flex gap-2">
             <input
@@ -165,7 +172,7 @@
           </div>
 
           <div class="space-y-3 mt-6">
-            <div v-if="candidate.comments.length === 0" class="text-center py-8 text-gray-500">
+            <div v-if="!candidate.comments?.length" class="text-center py-8 text-gray-500">
               <MessageSquare class="w-12 h-12 mx-auto mb-2 text-gray-300" />
               <p>No comments yet</p>
             </div>
@@ -175,18 +182,19 @@
               class="bg-gray-50 rounded-lg p-4"
             >
               <div class="flex items-center justify-between mb-2">
-                <span class="text-gray-900">{{ comment.author }}</span>
+                <span class="text-gray-900">{{ comment.authorName }}</span>
                 <span class="text-sm text-gray-500">
-                  {{ formatDateTime(comment.timestamp) }}
+                  {{ formatDateTime(comment.createdAt) }}
                 </span>
               </div>
-              <p class="text-gray-700">{{ comment.text }}</p>
+              <p class="text-gray-700">{{ comment.content }}</p>
             </div>
           </div>
         </div>
 
+        <!-- History Tab -->
         <div v-if="activeTab === 'history'" class="space-y-3">
-          <div v-if="candidate.history.length === 0" class="text-center py-8 text-gray-500">
+          <div v-if="!candidate.history?.length" class="text-center py-8 text-gray-500">
             <Clock class="w-12 h-12 mx-auto mb-2 text-gray-300" />
             <p>No history yet</p>
           </div>
@@ -200,7 +208,7 @@
               <p class="text-gray-900">{{ entry.action }}</p>
               <p class="text-sm text-gray-600">{{ entry.details }}</p>
               <p class="text-xs text-gray-500 mt-1">
-                {{ formatDateTime(entry.timestamp) }}
+                {{ formatDateTime(entry.createdAt) }} by {{ entry.performedByName }}
               </p>
             </div>
           </div>
@@ -210,97 +218,63 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, computed } from 'vue'
 import { X, Mail, Phone, Briefcase, Calendar, Download, MessageSquare, Clock } from 'lucide-vue-next'
-import { toast } from '../utils/toast'
+import { useToast } from '../composables/useToast'
 
-export default {
-  name: 'CandidateDetail',
-  components: {
-    X,
-    Mail,
-    Phone,
-    Briefcase,
-    Calendar,
-    Download,
-    MessageSquare,
-    Clock
+const props = defineProps({
+  candidate: {
+    type: Object,
+    required: true
   },
-  props: {
-    candidate: {
-      type: Object,
-      required: true
-    },
-    onClose: {
-      type: Function,
-      required: true
-    },
-    onAddComment: {
-      type: Function,
-      required: true
-    },
-    onAddTag: {
-      type: Function,
-      required: true
-    },
-    onRemoveTag: {
-      type: Function,
-      required: true
-    },
-    availableTags: {
-      type: Array,
-      required: true
-    }
-  },
-  setup(props) {
-    const newComment = ref('')
-    const newTag = ref('')
-    const activeTab = ref('overview')
-
-    const filteredTags = computed(() => {
-      return props.availableTags.filter(tag => !props.candidate.tags.includes(tag))
-    })
-
-    const handleAddComment = () => {
-      if (newComment.value.trim()) {
-        props.onAddComment(props.candidate.id, newComment.value)
-        newComment.value = ''
-        toast.success('Comment added')
-      }
-    }
-
-    const handleAddTag = (tag) => {
-      if (tag && !props.candidate.tags.includes(tag)) {
-        props.onAddTag(props.candidate.id, tag)
-        newTag.value = ''
-        toast.success('Tag added')
-      }
-    }
-
-    const handleDownloadCV = () => {
-      toast.info('CV download - Demo only')
-    }
-
-    const formatDate = (dateString) => {
-      return new Date(dateString).toLocaleDateString()
-    }
-
-    const formatDateTime = (dateString) => {
-      return new Date(dateString).toLocaleString()
-    }
-
-    return {
-      newComment,
-      newTag,
-      activeTab,
-      filteredTags,
-      handleAddComment,
-      handleAddTag,
-      handleDownloadCV,
-      formatDate,
-      formatDateTime
-    }
+  availableTags: {
+    type: Array,
+    required: true
   }
+})
+
+const emit = defineEmits(['close', 'add-comment', 'add-tag', 'remove-tag'])
+
+const toast = useToast()
+
+// Состояние
+const newComment = ref('')
+const newTag = ref('')
+const activeTab = ref('overview')
+
+// Теги, которых ещё нет у кандидата
+const filteredTags = computed(() => {
+  return props.availableTags.filter(tag => !props.candidate.tags.includes(tag))
+})
+
+// Добавление комментария
+const handleAddComment = () => {
+  if (newComment.value.trim()) {
+    emit('add-comment', props.candidate.id, newComment.value)
+    newComment.value = ''
+  }
+}
+
+// Добавление тега
+const handleAddTag = (tag) => {
+  if (tag && !props.candidate.tags.includes(tag)) {
+    emit('add-tag', props.candidate.id, tag)
+    newTag.value = ''
+  }
+}
+
+// Скачивание CV (демо)
+const handleDownloadCV = () => {
+  toast.info('CV download - Demo only')
+}
+
+// Форматирование даты
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleDateString()
+}
+
+const formatDateTime = (dateString) => {
+  return new Date(dateString).toLocaleString()
 }
 </script>

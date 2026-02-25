@@ -10,6 +10,7 @@
       </div>
 
       <form @submit.prevent="handleSubmit" class="space-y-5">
+        <!-- Email -->
         <div>
           <label class="block text-sm mb-2 text-gray-700">Email Address</label>
           <div class="relative">
@@ -24,6 +25,7 @@
           </div>
         </div>
 
+        <!-- Password -->
         <div>
           <label class="block text-sm mb-2 text-gray-700">Password</label>
           <div class="relative">
@@ -46,26 +48,34 @@
           </div>
         </div>
 
+        <!-- Submit Button -->
         <button
           type="submit"
-          class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-medium"
+          :disabled="loading"
+          class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Sign In
+          <span v-if="loading" class="flex items-center justify-center gap-2">
+            <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            Signing in...
+          </span>
+          <span v-else>Sign In</span>
         </button>
       </form>
 
+      <!-- Register Link -->
       <div class="mt-6 text-center">
         <p class="text-gray-600">
           Don't have an account?{' '}
-          <button
-            @click="$emit('switch-to-register')"
+          <router-link
+            to="/register"
             class="text-blue-600 hover:text-blue-700 font-medium"
           >
             Create account
-          </button>
+          </router-link>
         </p>
       </div>
 
+      <!-- Demo Credentials -->
       <div class="mt-8 p-4 bg-blue-50 rounded-lg">
         <p class="text-sm text-blue-800 mb-2">
           <strong>Demo Credentials:</strong>
@@ -79,47 +89,28 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref } from 'vue'
 import { LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-vue-next'
-import { toast } from '../utils/toast'
 
-export default {
-  name: 'LoginForm',
-  components: {
-    LogIn,
-    Mail,
-    Lock,
-    Eye,
-    EyeOff
-  },
-  props: {
-    onLogin: {
-      type: Function,
-      required: true
-    },
-    onSwitchToRegister: {
-      type: Function,
-      required: true
-    }
-  },
-  emits: ['login', 'switch-to-register'],
-  setup(props, { emit }) {
-    const formData = ref({
-      email: '',
-      password: ''
-    })
-    const showPassword = ref(false)
-
-    const handleSubmit = () => {
-      emit('login', formData.value.email, formData.value.password)
-    }
-
-    return {
-      formData,
-      showPassword,
-      handleSubmit
-    }
+const props = defineProps({
+  loading: {
+    type: Boolean,
+    default: false
   }
+})
+
+const emit = defineEmits(['login'])
+
+// Состояние формы
+const formData = ref({
+  email: '',
+  password: ''
+})
+const showPassword = ref(false)
+
+// Отправка формы
+const handleSubmit = () => {
+  emit('login', formData.value.email, formData.value.password)
 }
 </script>
