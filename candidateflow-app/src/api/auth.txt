@@ -1,10 +1,10 @@
 // stores/auth.js
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { api } from '../api/client'
-import { normalizeUser } from '../api/normalizers'
-import { useToast } from '../composables/useToast'
-import { useLocalStorage } from '../composables/useLocalStorage'
+import { api } from './client'  // ✅ изменено
+import { normalizeUser } from './normalizers'  // ✅ изменено
+import { useToast } from '../composables/useToast'  // ✅ изменено (не из utils!)
+import { useLocalStorage } from '../composables/useLocalStorage'  // ✅ изменено
 
 export const useAuthStore = defineStore('auth', () => {
   const toast = useToast()
@@ -13,7 +13,6 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
   const error = ref(null)
 
-  // Временное решение для демо - пока нет /auth/login
   const login = async (email, password) => {
     loading.value = true
     error.value = null
@@ -22,7 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
       console.log('🔐 Login attempt:', email)
 
       // ВРЕМЕННО: используем GET /users/ для демо
-      const users = await api.get('/users/')
+      const users = await api.get('/users/')  // ✅ используем api.client
       const foundUser = users.find(u => u.email === email)
 
       if (!foundUser) {
@@ -44,13 +43,12 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // Регистрация
   const register = async (email, password, name) => {
     loading.value = true
     error.value = null
 
     try {
-      const newUser = await api.post('/users/', {
+      const newUser = await api.post('/users/', {  // ✅ используем api.client
         email,
         password,
         name,

@@ -1,67 +1,45 @@
+<!-- components/AdminDashboard.vue -->
 <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- Основной контент -->
-    <div class="max-w-7xl mx-auto p-6">
-      <!-- Индикатор загрузки -->
-      <div v-if="candidatesStore.loading" class="flex justify-center py-12">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    <!-- Индикатор загрузки -->
+    <LoadingSpinner v-if="store.loading" />
+
+    <template v-else>
+      <div class="max-w-7xl mx-auto p-6 space-y-4">
+        <!-- Панель фильтров -->
+        <FilterPanel
+          v-model:search="ui.searchQuery"
+          v-model:stages="ui.selectedStages"
+          v-model:tags="ui.selectedTags"
+          :available-tags="store.availableTags"
+          @clear="ui.clearFilters"
+        />
+
+        <!-- Канбан доска -->
+        <KanbanBoard
+          v-if="isKanbanView"
+          :candidates="filteredCandidates"
+          @drop="handleDrop"
+          @candidate-click="openCandidateDetails"
+        />
+
+        <!-- Аналитика -->
+        <Analytics
+          v-else-if="isAnalyticsView"
+          :candidates="store.items"
+        />
       </div>
+    </template>
 
-      <!-- Контент в зависимости от текущего маршрута -->
-      <template v-else>
-        <!-- Kanban View (когда путь /admin) -->
-        <div v-if="isKanbanView" class="space-y-4">
-          <!-- Панель фильтров -->
-          <FilterPanel
-            :search-query="ui.searchQuery"
-            @search-change="ui.setSearchQuery"
-            :selected-stages="ui.selectedStages"
-            @stage-toggle="ui.toggleStage"
-            :selected-tags="ui.selectedTags"
-            @tag-toggle="ui.toggleTag"
-            :available-tags="candidatesStore.availableTags"
-            @clear-filters="ui.clearFilters"
-          />
-
-          <!-- Канбан-доска -->
-          <div class="flex gap-4 overflow-x-auto pb-4">
-            <KanbanColumn
-              v-for="stage in STAGES"
-              :key="stage.id"
-              :stage="stage"
-              :candidates="getCandidatesByStage(stage.id)"
-              @drop="handleDrop"
-              @candidate-click="openCandidateDetails"
-            />
-          </div>
-
-          <!-- Пустое состояние -->
-          <div v-if="filteredCandidates.length === 0" class="text-center py-12">
-            <Users class="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 class="text-lg text-gray-600 mb-2">No candidates found</h3>
-            <p class="text-gray-500">Try adjusting your filters or wait for new applications</p>
-          </div>
-        </div>
-
-        <!-- Analytics View (когда путь /admin/analytics) -->
-        <div v-else-if="isAnalyticsView">
-          <Analytics 
-            :key="'analytics-' + candidatesStore.items.length" 
-            :candidates="candidatesStore.items" 
-          />
-        </div>
-      </template>
-    </div>
-
-    <!-- Модальное окно деталей кандидата -->
+    <!-- Модальное окно -->
     <CandidateDetail
-      v-if="candidatesStore.selectedCandidate"
-      :candidate="candidatesStore.selectedCandidate"
+      v-if="store.selectedCandidate"
+      :candidate="store.selectedCandidate"
+      :available-tags="store.availableTags"
       @close="closeCandidateDetails"
-      @add-comment="candidatesStore.addComment"
-      @add-tag="candidatesStore.addTag"
-      @remove-tag="candidatesStore.removeTag"
-      :available-tags="candidatesStore.availableTags"
+      @add-comment="store.addComment"
+      @add-tag="store.addTag"
+      @remove-tag="store.removeTag"
     />
   </div>
 </template>
@@ -69,88 +47,79 @@
 <script setup>
 import { computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Users } from 'lucide-vue-next'
-import { STAGES } from '../constants/stages'
+import { storeToRefs } from 'pinia'
+import { STAGES } from '../constants/stages'  // ✅ путь правильный
 import { useCandidatesStore } from '../stores/candidates'
 import { useUIStore } from '../stores/ui'
-import KanbanColumn from './KanbanColumn.vue'
-import CandidateDetail from './CandidateDetail.vue'
-import Analytics from './Analytics.vue'
+import LoadingSpinner from './common/LoadingSpinner.vue'  // ✅ изменено
 import FilterPanel from './FilterPanel.vue'
+import KanbanBoard from './KanbanBoard.vue'  // ✅ изменено (был KanbanColumn)
+import Analytics from './Analytics.vue'
+import CandidateDetail from './CandidateDetail.vue'
 
 const route = useRoute()
-const candidatesStore = useCandidatesStore()
+const store = useCandidatesStore()
 const ui = useUIStore()
 
-// Вычисляемые свойства для определения текущего представления
+const { items } = storeToRefs(store)
+
+// Вычисляемые свойства
 const isKanbanView = computed(() => route.path === '/admin')
 const isAnalyticsView = computed(() => route.path === '/admin/analytics')
 
-// Загрузка кандидатов при монтировании
-onMounted(() => {
-  loadCandidates()
-})
-
-// Загрузка кандидатов
-const loadCandidates = async () => {
-  await candidatesStore.fetchCandidates()
-}
-
-// Фильтрация кандидатов
+// Фильтрация с мемоизацией
 const filteredCandidates = computed(() => {
-  if (!candidatesStore.items.length) return []
-  
-  return candidatesStore.items.filter(candidate => {
-    // Поиск по тексту
-    const matchesSearch = !ui.searchQuery ||
-      candidate.name.toLowerCase().includes(ui.searchQuery.toLowerCase()) ||
-      candidate.email.toLowerCase().includes(ui.searchQuery.toLowerCase()) ||
-      candidate.position.toLowerCase().includes(ui.searchQuery.toLowerCase())
+  const { searchQuery, selectedStages, selectedTags } = ui
+
+  return items.value.filter(candidate => {
+    // Поиск
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      const matches =
+        candidate.name?.toLowerCase().includes(query) ||
+        candidate.email?.toLowerCase().includes(query) ||
+        candidate.position?.toLowerCase().includes(query)
+
+      if (!matches) return false
+    }
 
     // Фильтр по этапам
-    const matchesStage = ui.selectedStages.length === 0 || 
-      ui.selectedStages.includes(candidate.stage)
+    if (selectedStages.length && !selectedStages.includes(candidate.stage)) {
+      return false
+    }
 
     // Фильтр по тегам
-    const matchesTags = ui.selectedTags.length === 0 || 
-      ui.selectedTags.some(tag => candidate.tags.includes(tag))
+    if (selectedTags.length) {
+      const hasTag = selectedTags.some(tag => candidate.tags?.includes(tag))
+      if (!hasTag) return false
+    }
 
-    return matchesSearch && matchesStage && matchesTags
+    return true
   })
 })
 
-// Получение кандидатов для конкретного этапа
-const getCandidatesByStage = (stageId) => {
-  return filteredCandidates.value.filter(c => c.stage === stageId)
-}
-
-// Обработка перемещения кандидата
-const handleDrop = (candidateId, newStage) => {
-  candidatesStore.moveCandidate(candidateId, newStage)
-}
-
-// Открытие деталей кандидата
-const openCandidateDetails = (candidate) => {
-  candidatesStore.setSelectedCandidate(candidate)
-}
-
-// Закрытие деталей кандидата
-const closeCandidateDetails = () => {
-  candidatesStore.setSelectedCandidate(null)
-}
-
-// Следим за изменением маршрута
-watch(() => route.path, async (newPath) => {
-  console.log('Route changed to:', newPath)
-  
-  // Если перешли на аналитику, убеждаемся что данные загружены
-  if (newPath === '/admin/analytics' && candidatesStore.items.length === 0) {
-    await loadCandidates()
-  }
+// Загрузка данных
+onMounted(async () => {
+  await store.fetchCandidates()
 })
 
-// Следим за изменением кандидатов для отладки
-watch(() => candidatesStore.items, (newItems) => {
-  console.log('Candidates updated:', newItems.length)
-}, { deep: true })
+// Обработчики
+const handleDrop = (candidateId, newStage) => {
+  store.moveCandidate(candidateId, newStage)
+}
+
+const openCandidateDetails = (candidate) => {
+  store.setSelectedCandidate(candidate)
+}
+
+const closeCandidateDetails = () => {
+  store.setSelectedCandidate(null)
+}
+
+// Следим за маршрутом
+watch(() => route.path, async (newPath) => {
+  if ((newPath === '/admin' || newPath === '/admin/analytics') && items.value.length === 0) {
+    await store.fetchCandidates()
+  }
+})
 </script>

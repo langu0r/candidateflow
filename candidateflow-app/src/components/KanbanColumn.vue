@@ -1,8 +1,9 @@
+<!-- components/KanbanColumn.vue -->
 <template>
   <div
     :class="[
       'flex-shrink-0 w-80 rounded-lg border-2 p-4 transition',
-      StageBgColors[stage.id] || 'bg-gray-50 border-gray-200',
+      STAGE_BG_CLASSES[stage.id] || 'bg-gray-50 border-gray-200',
       isDragOver ? 'ring-2 ring-blue-400 bg-opacity-80' : ''
     ]"
     @dragover.prevent="handleDragOver"
@@ -19,7 +20,7 @@
 
     <!-- Список кандидатов -->
     <div class="space-y-3 min-h-[200px]">
-      <CandidateCardSmall
+      <CandidateCard
         v-for="candidate in candidates"
         :key="candidate.id"
         :candidate="candidate"
@@ -36,8 +37,8 @@
 
 <script setup>
 import { ref } from 'vue'
-import { StageBgColors } from '../constants/stages'
-import CandidateCardSmall from './CandidateCardSmall.vue'
+import { STAGE_BG_CLASSES } from '../constants/stages'
+import CandidateCard from './CandidateCard.vue' // ← ИЗМЕНЕНО: import нового компонента
 
 const props = defineProps({
   stage: {
@@ -76,6 +77,7 @@ const handleDrop = (event) => {
   
   // Получаем ID кандидата из dataTransfer
   const candidateId = event.dataTransfer.getData('text/plain')
+  console.log('Drop event - candidateId:', candidateId)
   
   if (candidateId) {
     emit('drop', candidateId, props.stage.id)

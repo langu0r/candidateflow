@@ -125,7 +125,7 @@
 <script setup>
 import { ref } from 'vue'
 import { UserPlus, Mail, Lock, User as UserIcon, Eye, EyeOff } from 'lucide-vue-next'
-import { useToast } from '../composables/useToast'
+import { useToast } from './composables/useToast'
 
 const props = defineProps({
   loading: {

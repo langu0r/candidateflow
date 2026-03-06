@@ -111,6 +111,7 @@ const showPassword = ref(false)
 
 // Отправка формы
 const handleSubmit = () => {
+  console.log('Login form submitted with:', formData.value)
   emit('login', formData.value.email, formData.value.password)
 }
 </script>

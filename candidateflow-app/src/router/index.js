@@ -1,12 +1,11 @@
 // router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 
-// Импортируем компоненты
-import AdminDashboard from '../components/AdminDashboard.vue'
-import ApplicationForm from '../components/ApplicationForm.vue'
-import LoginForm from '../components/LoginForm.vue'
-import RegisterForm from '../components/RegisterForm.vue'
-import Analytics from '../components/Analytics.vue'
+// Импортируем компоненты с правильными путями
+const AdminDashboard = () => import('../components/AdminDashboard.vue')
+const ApplicationForm = () => import('../components/ApplicationForm.vue')
+const LoginForm = () => import('../components/LoginForm.vue')
+const RegisterForm = () => import('../components/RegisterForm.vue')
 
 // Определяем маршруты
 const routes = [
@@ -28,7 +27,7 @@ const routes = [
   {
     path: '/admin/analytics',
     name: 'analytics',
-    component: AdminDashboard, // Важно! Используем тот же компонент
+    component: AdminDashboard,
     meta: { requiresAuth: true }
   },
   {
@@ -47,23 +46,23 @@ const routes = [
   }
 ]
 
-// Создаем роутер
 const router = createRouter({
   history: createWebHistory(),
   routes
 })
 
 // Guard для проверки авторизации
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, from) => {
   const isAuthenticated = localStorage.getItem('currentUser')
   
   if (to.meta.requiresAuth && !isAuthenticated) {
-    next('/login')
-  } else if ((to.path === '/login' || to.path === '/register') && isAuthenticated) {
-    next('/admin')
-  } else {
-    next()
+    return '/login'
   }
+  if ((to.path === '/login' || to.path === '/register') && isAuthenticated) {
+    return '/admin'
+  }
+  // разрешаем переход
+  return true
 })
 
 export default router

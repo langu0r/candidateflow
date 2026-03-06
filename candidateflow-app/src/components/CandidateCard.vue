@@ -1,3 +1,4 @@
+<!-- components/CandidateCard.vue -->
 <template>
   <div
     :class="[
@@ -13,19 +14,19 @@
     <div class="flex items-start justify-between mb-2">
       <h3 class="font-medium text-gray-900">{{ candidate.name }}</h3>
       <div v-if="candidate.tags.length > 0" class="flex gap-1">
-        <span
+        <Tag
           v-for="tag in candidate.tags.slice(0, 2)"
           :key="tag"
-          class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700"
-        >
-          {{ tag }}
-        </span>
-        <span
+          :tag="tag"
+          size="sm"
+          color="blue"
+        />
+        <Tag
           v-if="candidate.tags.length > 2"
-          class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600"
-        >
-          +{{ candidate.tags.length - 2 }}
-        </span>
+          :tag="`+${candidate.tags.length - 2}`"
+          color="gray"
+          size="sm"
+        />
       </div>
     </div>
 
@@ -57,6 +58,7 @@
 <script setup>
 import { ref } from 'vue'
 import { Mail, Briefcase, Calendar } from 'lucide-vue-next'
+import Tag from './common/Tag.vue'
 
 const props = defineProps({
   candidate: {
@@ -80,7 +82,7 @@ const handleDragStart = (event) => {
   isDragging.value = true
   
   // Устанавливаем данные для drag
-  event.dataTransfer.setData('text/plain', props.candidate.id)
+  event.dataTransfer.setData('text/plain', String(props.candidate.candidate_id || props.candidate.id))
   event.dataTransfer.effectAllowed = 'move'
   
   // Добавляем визуальную обратную связь

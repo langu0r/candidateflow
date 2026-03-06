@@ -104,7 +104,7 @@
 import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
 import * as echarts from 'echarts'
 import { TrendingUp, Users, CheckCircle, Target } from 'lucide-vue-next'
-import { STAGES, StageColors, StageLabels } from '../constants/stages'
+import { STAGES, STAGE_COLORS, STAGE_LABELS } from '../constants/stages'
 
 const props = defineProps({
   candidates: {
@@ -140,12 +140,12 @@ const recentCandidates = computed(() => {
 
 // Получение цвета этапа
 const getStageColor = (stageId) => {
-  return StageColors[stageId] || '#9CA3AF'
+  return STAGE_COLORS[stageId] || '#9CA3AF'
 }
 
 // Получение названия этапа
 const getStageLabel = (stageId) => {
-  return StageLabels[stageId] || stageId
+  return STAGE_LABELS[stageId] || stageId
 }
 
 // Форматирование даты
@@ -171,7 +171,7 @@ const initFunnelChart = () => {
     name: stage.label,
     value: props.candidates.filter(c => c.stage === stage.id).length,
     itemStyle: {
-      color: StageColors[stage.id]
+      color: STAGE_COLORS[stage.id]
     }
   })).filter(item => item.value > 0)
 
@@ -292,7 +292,7 @@ const initStageChart = () => {
         data: stageData.map((item, index) => ({
           value: item.value,
           itemStyle: {
-            color: StageColors[STAGES[index].id] || '#3B82F6'
+            color: STAGE_COLORS[STAGES[index].id] || '#3B82F6'
           }
         })),
         barWidth: '60%',
@@ -318,7 +318,7 @@ const updateCharts = () => {
       name: stage.label,
       value: props.candidates.filter(c => c.stage === stage.id).length,
       itemStyle: {
-        color: StageColors[stage.id]
+        color: STAGE_COLORS[stage.id]
       }
     })).filter(item => item.value > 0)
     
@@ -343,7 +343,7 @@ const updateCharts = () => {
         data: stageData.map((item, index) => ({
           value: item.value,
           itemStyle: {
-            color: StageColors[STAGES[index].id] || '#3B82F6'
+            color: STAGE_COLORS[STAGES[index].id] || '#3B82F6'
           }
         }))
       }]

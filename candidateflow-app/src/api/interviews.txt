@@ -1,0 +1,71 @@
+import { API_BASE_URL, getAuthHeaders, handleResponse } from './config'
+
+/**
+ * @typedef {Object} Interview
+ * @property {number} id
+ * @property {number} candidate_id
+ * @property {string} interview_round
+ * @property {string} type
+ * @property {string} scheduled_at
+ * @property {string} status
+ */
+
+/**
+ * Получить интервью по ID
+ * @param {number} id
+ * @returns {Promise<Interview>}
+ */
+export const fetchInterviewById = async (id) => {
+  const response = await fetch(`${API_BASE_URL}/interview/${id}`, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  })
+  return handleResponse(response)
+}
+
+/**
+ * Создать новое интервью
+ * @param {Object} interviewData
+ * @param {number} interviewData.candidate_id
+ * @param {string} interviewData.interview_round
+ * @param {string} interviewData.type
+ * @param {string} interviewData.scheduled_at
+ * @returns {Promise<Interview>}
+ */
+export const createInterview = async (interviewData) => {
+  const response = await fetch(`${API_BASE_URL}/interview/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(interviewData)
+  })
+  return handleResponse(response)
+}
+
+/**
+ * Обновить интервью
+ * @param {number} id
+ * @param {Object} updates
+ * @param {string} [updates.status]
+ * @returns {Promise<Interview>}
+ */
+export const updateInterview = async (id, updates) => {
+  const response = await fetch(`${API_BASE_URL}/interview/${id}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(updates)
+  })
+  return handleResponse(response)
+}
+
+/**
+ * Удалить интервью
+ * @param {number} id
+ * @returns {Promise<void>}
+ */
+export const deleteInterview = async (id) => {
+  const response = await fetch(`${API_BASE_URL}/interview/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  })
+  return handleResponse(response)
+}

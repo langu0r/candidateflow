@@ -1,227 +1,87 @@
+<!-- components/CandidateDetail.vue -->
 <template>
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-      <!-- Header -->
-      <div class="border-b border-gray-200 p-6 flex items-start justify-between">
+  <BaseModal
+    :model-value="!!candidate"
+    title="Candidate Details"
+    @update:model-value="$emit('close')"
+    content-class="max-w-4xl"
+  >
+    <!-- Header с информацией -->
+    <template #header>
+      <div class="flex items-start justify-between">
         <div>
           <h2 class="text-2xl mb-2">{{ candidate.name }}</h2>
           <div class="flex gap-2 flex-wrap">
-            <span
+            <Tag
               v-for="tag in candidate.tags"
               :key="tag"
-              class="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-100 text-blue-700 text-sm"
-            >
-              {{ tag }}
-              <button
-                @click="$emit('remove-tag', candidate.id, tag)"
-                class="hover:text-blue-900"
-              >
-                <X class="w-3 h-3" />
-              </button>
-            </span>
+              :tag="tag"
+              removable
+              @remove="$emit('remove-tag', candidate.candidate_id, tag)"
+            />
           </div>
         </div>
         <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600">
           <X class="w-6 h-6" />
         </button>
       </div>
+    </template>
 
-      <!-- Tabs -->
-      <div class="border-b border-gray-200 px-6">
-        <div class="flex gap-4">
-          <button
-            @click="activeTab = 'overview'"
-            :class="[
-              'py-3 border-b-2 transition',
-              activeTab === 'overview'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            ]"
-          >
-            Overview
-          </button>
-          <button
-            @click="activeTab = 'comments'"
-            :class="[
-              'py-3 border-b-2 transition',
-              activeTab === 'comments'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            ]"
-          >
-            Comments ({{ candidate.comments?.length || 0 }})
-          </button>
-          <button
-            @click="activeTab = 'history'"
-            :class="[
-              'py-3 border-b-2 transition',
-              activeTab === 'history'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            ]"
-          >
-            History ({{ candidate.history?.length || 0 }})
-          </button>
-        </div>
-      </div>
-
-      <!-- Content -->
-      <div class="flex-1 overflow-y-auto p-6">
-        <!-- Overview Tab -->
-        <div v-if="activeTab === 'overview'" class="space-y-6">
-          <div class="grid grid-cols-2 gap-4">
-            <div class="flex items-center gap-3">
-              <Mail class="w-5 h-5 text-gray-400" />
-              <div>
-                <p class="text-sm text-gray-600">Email</p>
-                <p class="text-gray-900">{{ candidate.email }}</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-3">
-              <Phone class="w-5 h-5 text-gray-400" />
-              <div>
-                <p class="text-sm text-gray-600">Phone</p>
-                <p class="text-gray-900">{{ candidate.phone || 'Not provided' }}</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-3">
-              <Briefcase class="w-5 h-5 text-gray-400" />
-              <div>
-                <p class="text-sm text-gray-600">Position</p>
-                <p class="text-gray-900">{{ candidate.position }}</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-3">
-              <Calendar class="w-5 h-5 text-gray-400" />
-              <div>
-                <p class="text-sm text-gray-600">Applied</p>
-                <p class="text-gray-900">
-                  {{ formatDate(candidate.createdAt) }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- CV Document -->
-          <div v-if="candidate.cv" class="border-t border-gray-200 pt-6">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg">CV Document</h3>
-              <button
-                @click="handleDownloadCV"
-                class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Download class="w-4 h-4" />
-                Download CV
-              </button>
-            </div>
-            <div class="bg-gray-50 rounded-lg p-4">
-              <p class="text-gray-700">{{ candidate.cv.originalName }}</p>
-              <p class="text-xs text-gray-500 mt-1">
-                Uploaded {{ formatDate(candidate.cv.uploadedAt) }}
-              </p>
-            </div>
-          </div>
-
-          <!-- Add Tags -->
-          <div class="border-t border-gray-200 pt-6">
-            <h3 class="text-lg mb-3">Add Tags</h3>
-            <div class="flex gap-2 mb-3 flex-wrap">
-              <button
-                v-for="tag in filteredTags"
-                :key="tag"
-                @click="handleAddTag(tag)"
-                class="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm"
-              >
-                + {{ tag }}
-              </button>
-            </div>
-            <div class="flex gap-2">
-              <input
-                type="text"
-                v-model="newTag"
-                @keypress.enter="handleAddTag(newTag)"
-                placeholder="Create new tag"
-                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
-              />
-              <button
-                @click="handleAddTag(newTag)"
-                class="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
-              >
-                Add
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Comments Tab -->
-        <div v-if="activeTab === 'comments'" class="space-y-4">
-          <div class="flex gap-2">
-            <input
-              type="text"
-              v-model="newComment"
-              @keypress.enter="handleAddComment"
-              placeholder="Add a comment..."
-              class="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
-            />
-            <button
-              @click="handleAddComment"
-              class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Post
-            </button>
-          </div>
-
-          <div class="space-y-3 mt-6">
-            <div v-if="!candidate.comments?.length" class="text-center py-8 text-gray-500">
-              <MessageSquare class="w-12 h-12 mx-auto mb-2 text-gray-300" />
-              <p>No comments yet</p>
-            </div>
-            <div
-              v-for="comment in candidate.comments"
-              :key="comment.id"
-              class="bg-gray-50 rounded-lg p-4"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-gray-900">{{ comment.authorName }}</span>
-                <span class="text-sm text-gray-500">
-                  {{ formatDateTime(comment.createdAt) }}
-                </span>
-              </div>
-              <p class="text-gray-700">{{ comment.content }}</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- History Tab -->
-        <div v-if="activeTab === 'history'" class="space-y-3">
-          <div v-if="!candidate.history?.length" class="text-center py-8 text-gray-500">
-            <Clock class="w-12 h-12 mx-auto mb-2 text-gray-300" />
-            <p>No history yet</p>
-          </div>
-          <div
-            v-for="entry in candidate.history"
-            :key="entry.id"
-            class="flex gap-4 pb-3 border-b border-gray-200 last:border-0"
-          >
-            <div class="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2" />
-            <div class="flex-1">
-              <p class="text-gray-900">{{ entry.action }}</p>
-              <p class="text-sm text-gray-600">{{ entry.details }}</p>
-              <p class="text-xs text-gray-500 mt-1">
-                {{ formatDateTime(entry.createdAt) }} by {{ entry.performedByName }}
-              </p>
-            </div>
-          </div>
-        </div>
+    <!-- Tabs -->
+    <div class="border-b border-gray-200">
+      <div class="flex gap-4">
+        <TabButton
+          v-for="tab in tabs"
+          :key="tab.id"
+          :active="activeTab === tab.id"
+          @click="activeTab = tab.id"
+        >
+          {{ tab.label }}
+          <span v-if="tab.count" class="ml-1 text-sm">({{ tab.count }})</span>
+        </TabButton>
       </div>
     </div>
-  </div>
+
+    <!-- Content -->
+    <div class="min-h-[400px]">
+      <!-- Overview Tab -->
+      <OverviewTab
+        v-if="activeTab === 'overview'"
+        :candidate="candidate"
+        :available-tags="availableTags"
+        @add-tag="handleAddTag"
+      />
+
+      <!-- Comments Tab -->
+      <CommentsTab
+        v-else-if="activeTab === 'comments'"
+        :comments="comments"
+        :loading="commentsLoading"
+        @add="handleAddComment"
+        @refresh="loadComments"
+      />
+
+      <!-- History Tab -->
+      <HistoryTab
+        v-else-if="activeTab === 'history'"
+        :history="history"
+        :loading="historyLoading"
+        @refresh="loadHistory"
+      />
+    </div>
+  </BaseModal>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { X, Mail, Phone, Briefcase, Calendar, Download, MessageSquare, Clock } from 'lucide-vue-next'
-import { useToast } from '../composables/useToast'
+import { ref, computed, watch } from 'vue'
+import { X } from 'lucide-vue-next'
+import BaseModal from './common/BaseModal.vue'
+import Tag from './common/Tag.vue'
+import TabButton from './common/TabButton.vue'
+import OverviewTab from './tabs/OverviewTab.vue'
+import CommentsTab from './tabs/CommentsTab.vue'
+import HistoryTab from './tabs/HistoryTab.vue'
+import { useCandidatesStore } from '../stores/candidates'
 
 const props = defineProps({
   candidate: {
@@ -230,51 +90,68 @@ const props = defineProps({
   },
   availableTags: {
     type: Array,
-    required: true
+    default: () => []
   }
 })
 
 const emit = defineEmits(['close', 'add-comment', 'add-tag', 'remove-tag'])
 
-const toast = useToast()
-
-// Состояние
-const newComment = ref('')
-const newTag = ref('')
+const store = useCandidatesStore()
 const activeTab = ref('overview')
+const commentsLoading = ref(false)
+const historyLoading = ref(false)
+const comments = ref(props.candidate.comments || [])
+const history = ref(props.candidate.history || [])
 
-// Теги, которых ещё нет у кандидата
-const filteredTags = computed(() => {
-  return props.availableTags.filter(tag => !props.candidate.tags.includes(tag))
+const tabs = computed(() => [
+  { id: 'overview', label: 'Overview' },
+  { id: 'comments', label: 'Comments', count: comments.value.length },
+  { id: 'history', label: 'History', count: history.value.length }
+])
+
+// Загрузка данных по требованию
+const loadComments = async () => {
+  commentsLoading.value = true
+  try {
+    comments.value = await store.loadCandidateComments(props.candidate.candidate_id)
+  } finally {
+    commentsLoading.value = false
+  }
+}
+
+const loadHistory = async () => {
+  historyLoading.value = true
+  try {
+    history.value = await store.loadCandidateHistory(props.candidate.candidate_id)
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+watch(activeTab, async (newTab) => {
+  if (newTab === 'comments' && comments.value.length === 0) {
+    await loadComments()
+  }
+  if (newTab === 'history' && history.value.length === 0) {
+    await loadHistory()
+  }
 })
 
-// Добавление комментария
-const handleAddComment = () => {
-  if (newComment.value.trim()) {
-    emit('add-comment', props.candidate.id, newComment.value)
-    newComment.value = ''
-  }
+const handleAddComment = (content) => {
+  emit('add-comment', props.candidate.candidate_id, content)
+  // Оптимистичное обновление
+  comments.value = [
+    {
+      id: Date.now(),
+      content,
+      authorName: 'You',
+      createdAt: new Date().toISOString()
+    },
+    ...comments.value
+  ]
 }
 
-// Добавление тега
 const handleAddTag = (tag) => {
-  if (tag && !props.candidate.tags.includes(tag)) {
-    emit('add-tag', props.candidate.id, tag)
-    newTag.value = ''
-  }
-}
-
-// Скачивание CV (демо)
-const handleDownloadCV = () => {
-  toast.info('CV download - Demo only')
-}
-
-// Форматирование даты
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString()
-}
-
-const formatDateTime = (dateString) => {
-  return new Date(dateString).toLocaleString()
+  emit('add-tag', props.candidate.candidate_id, tag)
 }
 </script>
